@@ -31,8 +31,14 @@ public class Main {
                     StorageManager.savePasswordList(passManager.getAllEntries());
                     break;
                 case "get":
+                    for (String s : passManager.getAllServices()){
+                        System.out.println(s);
+                    }
                     System.out.println("Enter Service: ");
                     service = scanner.nextLine();
+                    for (String s : passManager.getAllUsrsForService(service)){
+                        System.out.println(s);
+                    }                    
                     System.out.println("Enter UserName: ");
                     userName = scanner.nextLine();
                     System.out.println(passManager.getPassword(service, userName));
@@ -48,6 +54,7 @@ public class Main {
                     StorageManager.savePasswordList(passManager.getAllEntries());
                     break;
                 case "exit":
+                    scanner.close();
                     return;
                 default:
                     System.out.println("Dont play with me bitch");

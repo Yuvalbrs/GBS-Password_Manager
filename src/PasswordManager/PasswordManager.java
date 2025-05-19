@@ -73,4 +73,22 @@ public class PasswordManager {
         System.out.println("service/username dont exist");
         return;
     }
+    public ArrayList<String> getAllServices() {
+        ArrayList<String> sList = new ArrayList<>();
+        for (PasswordEntry entry : entries) {
+            if (!sList.contains(entry.getService())) {
+                sList.add(entry.getService());
+            }
+        }
+        return sList;
+    }
+    public ArrayList<String> getAllUsrsForService(String s) {
+        ArrayList<String> uList = new ArrayList<>();
+        for (PasswordEntry entry : entries) {
+            if (entry.getService().equalsIgnoreCase(s)) {
+                uList.add(entry.getUsr());
+            }
+        }
+        return uList;
+    }
 }
