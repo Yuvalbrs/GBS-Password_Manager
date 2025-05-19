@@ -7,16 +7,17 @@ import PasswordManager.PasswordManager;
 public class Main {
     public static void main(String[] args) {
         PasswordManager passManager = new PasswordManager(StorageManager.loadIntoList());
+        Scanner scanner = new Scanner(System.in);
+        String service, userName, passWord;
         while (true) {
-            Scanner scanner = new Scanner(System.in);
-            System.out.println("add/delete/get/update/exit");
-            String service, userName, passWord;
+            System.out.println("\nadd/delete/get/update/exit");
             switch (scanner.nextLine()) {
                 case "add":
                     System.out.println("Enter Service: ");
                     service = scanner.nextLine();
                     System.out.println("Enter UserName: ");
                     userName = scanner.nextLine();
+                    System.out.println("Recomended Password: " + PasswordGenerator.generatePassword());
                     System.out.println("Enter Password: ");
                     passWord = scanner.nextLine();
                     passManager.addPassword(new PasswordEntry(service, userName, passWord));
@@ -38,7 +39,7 @@ public class Main {
                     service = scanner.nextLine();
                     for (String s : passManager.getAllUsrsForService(service)){
                         System.out.println(s);
-                    }                    
+                    }
                     System.out.println("Enter UserName: ");
                     userName = scanner.nextLine();
                     System.out.println(passManager.getPassword(service, userName));
