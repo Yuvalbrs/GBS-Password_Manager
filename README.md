@@ -21,4 +21,5 @@ It includes a command-line interface (CLI) as well as a fully featured graphical
 ## How to run
 1. Compile:
 ```bash
-javac -cp .:json.jar src/*.java
+javac -cp lib/json-20231013.jar -d out src/*.java src/PasswordManager/*.java
+java -cp "lib/json-20231013.jar;out" Main
