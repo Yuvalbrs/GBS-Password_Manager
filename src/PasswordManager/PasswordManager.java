@@ -1,4 +1,4 @@
-package PasswordManeger;
+package PasswordManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +37,7 @@ public class PasswordManager {
     public List<PasswordEntry> getAllEntries() {
         return new ArrayList<>(entries);
     }
-    public String Getpass(String service, String username) {
+    public String getPassword(String service, String username) {
         if (entries.isEmpty()) {
             System.out.println("List is empty");
             return null;

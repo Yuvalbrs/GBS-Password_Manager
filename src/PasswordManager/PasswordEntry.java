@@ -1,4 +1,4 @@
-package PasswordManeger;
+package PasswordManager;
 
 public class PasswordEntry {
     private String service ;
