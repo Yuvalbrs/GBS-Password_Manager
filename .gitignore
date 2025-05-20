@@ -2,3 +2,4 @@
 *.log
 passwords.json
 .DS_STORE
+masterPassword.hash
