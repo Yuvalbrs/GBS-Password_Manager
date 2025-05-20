@@ -1,9 +1,11 @@
 import java.io.File;
 import java.io.FileWriter;
 import java.nio.file.Files;
-
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 
 public class MasterPasswordManager {
 
@@ -33,22 +35,49 @@ public class MasterPasswordManager {
         return false;
     }
 
+    public static boolean recoverPassword(String answer, String newPass) {
+        try {
+            Path path = Paths.get("masterPassword.hash");
+            List<String> lines = Files.readAllLines(path);
+            String thirdLine = lines.get(2).trim();
+            if (sha256(answer).equals(thirdLine)) {
+                lines.set(0, sha256(newPass));
+                Files.write(path, lines);
+                return true;
+            } else {
+                return false;
+            }
 
-    public static boolean checkPassword(String password) {
+        } catch (Exception e) {
+            System.err.println();
+            return false;
+        }
+
+
+    }
+
+    public static void createMasterPassword(String password, String safeQuestion, String answer) {
         try {
             File file = new File(FILE_NAME);
 
-            // If file doesn't exist, create a new one
-            if (!isFirstTime()) {
-                file.createNewFile();
-                FileWriter writer = new FileWriter(file);
-                writer.write(sha256(password));
-                writer.close();
-                return true;
-            }
+            file.createNewFile();
+            FileWriter writer = new FileWriter(file);
+            writer.write(sha256(password) + "\n");
+            writer.write(safeQuestion + "\n");
+            writer.write(sha256(answer) + "\n");
+            writer.close();
 
-            String content = new String(Files.readAllBytes(file.toPath())).trim();
-            if (sha256(password).equals(content)) {
+        } catch (Exception e) {
+            System.err.println();
+        }
+    }
+
+    public static boolean checkPassword(String password) {
+        try {
+            Path path = Paths.get("masterPassword.hash");
+            List<String> lines = Files.readAllLines(path);
+            String firstLine = lines.get(0).trim();
+            if (sha256(password).equals(firstLine)) {
                 return true;
             }
             else {
