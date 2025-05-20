@@ -1,9 +1,6 @@
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.nio.file.Files;
-
-import org.json.JSONArray;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -27,13 +24,22 @@ public class MasterPasswordManager {
         }
     }
 
+    public static boolean isFirstTime() {
+        File file = new File(FILE_NAME);
+
+        if (!file.exists()) {
+            return true;
+        }
+        return false;
+    }
+
 
     public static boolean checkPassword(String password) {
         try {
             File file = new File(FILE_NAME);
 
-            // If file doesn't exist, create a new empty one
-            if (!file.exists()) {
+            // If file doesn't exist, create a new one
+            if (!isFirstTime()) {
                 file.createNewFile();
                 FileWriter writer = new FileWriter(file);
                 writer.write(sha256(password));
