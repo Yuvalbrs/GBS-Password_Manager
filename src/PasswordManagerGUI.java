@@ -7,12 +7,66 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TextFormatter;
 import javafx.stage.Stage;
 
 public class PasswordManagerGUI extends Application {
 
     @Override
     public void start(Stage stage) {
+        // === Master Password Check ===
+        VBox masterLayout = new VBox(20);
+        masterLayout.setAlignment(Pos.CENTER);
+        masterLayout.setStyle("-fx-background-color: linear-gradient(to bottom,rgb(108, 184, 255),rgb(45, 115, 164));");
+        // Set Outline Effect
+        DropShadow masterOutline = new DropShadow();
+        masterOutline.setOffsetX(0);
+        masterOutline.setOffsetY(0);
+        masterOutline.setColor(Color.BLACK);      // Outline color
+        masterOutline.setRadius(15);               // Thickness
+
+        Text masterTitle = new Text("Login To Password Manager");
+        masterTitle.setFill(Color.WHITE);
+        masterTitle.setEffect(masterOutline);
+        masterTitle.setFont(Font.font("Segoe UI", 90));
+
+        Text enterPassText = new Text("Enter your password:");
+        TextField masterPassword = new TextField();
+        masterPassword.setPromptText("Enter up to 30 characters");
+        TextFormatter<String> masterPasswordFormatter = new TextFormatter<>(change -> {
+            if (change.getControlNewText().length() <= 30) {
+                return change;
+            } else {
+                return null; // Reject the change
+            }
+        });
+        masterPassword.setTextFormatter(masterPasswordFormatter);
+        if (MasterPasswordManager.isFirstTime()) {
+            Text chooseQuestionText = new Text("Choose your recovery question:");
+            ComboBox<String> comboBox = new ComboBox<>();
+            comboBox.getItems().addAll("What is your mother's mother's name?", "What was the name of your first pet?", "In what city were you born?");
+            // First question by defult
+            comboBox.setValue("What is your mother's mother's name?");
+            comboBox.setOnAction(e -> {
+                String recoveryQuestion = comboBox.getValue();
+            });
+            TextField recoveryAnswer = new TextField();
+            recoveryAnswer.setPromptText("Enter up to 20 characters");
+            TextFormatter<String> answerFormatter = new TextFormatter<>(change -> {
+                if (change.getControlNewText().length() <= 20) {
+                    return change;
+                } else {
+                    return null; // Reject the change
+                }
+            });
+            recoveryAnswer.setTextFormatter(answerFormatter);
+        }
+        masterLayout.getChildren().addAll(masterTitle, enterPassText);
+        masterLayout.setAlignment(Pos.CENTER);
+        Scene masterScene = new Scene(masterLayout, 1920, 1080);
+
         // === Main Menu ===
         VBox menuLayout = new VBox(20);
         menuLayout.setAlignment(Pos.CENTER);
@@ -80,9 +134,9 @@ public class PasswordManagerGUI extends Application {
         backFromLoad.setOnAction(e -> stage.setScene(mainMenu));
         backFromDelete.setOnAction(e -> stage.setScene(mainMenu));
 
-        // === Launch Main Menu ===
+        // === Launch Master Password Check ===
         stage.setTitle("Password Manager GUI");
-        stage.setScene(mainMenu);
+        stage.setScene(masterScene);
         stage.show();
     }
 
