@@ -43,27 +43,31 @@ public class PasswordManagerGUI extends Application {
             }
         });
         masterPassword.setTextFormatter(masterPasswordFormatter);
+        Text warning = new Text();
+        warning.setVisible(false);
+        warning.setFill(Color.RED);
+        // --- First time loading the program ---
+        Text chooseQuestionText = new Text("Choose your recovery question:");
+        ComboBox<String> recoveryQuestion = new ComboBox<>();
+        recoveryQuestion.getItems().addAll("What is your mother's mother's name?", "What was the name of your first pet?", "In what city were you born?");
+        // First question by defult
+        recoveryQuestion.setValue("What is your mother's mother's name?");
+        TextField recoveryAnswer = new TextField();
+        recoveryAnswer.setPromptText("Enter up to 20 characters");
+        TextFormatter<String> answerFormatter = new TextFormatter<>(change -> {
+            if (change.getControlNewText().length() <= 20) {
+                return change;
+            } else {
+                return null; // Reject the change
+            }
+        });
+        recoveryAnswer.setTextFormatter(answerFormatter);
+        Button signUpButton = new Button("Sign Up");
+        styleButton(signUpButton);
+        // Signup or Login Check
         if (MasterPasswordManager.isFirstTime()) {
-            Text chooseQuestionText = new Text("Choose your recovery question:");
-            ComboBox<String> comboBox = new ComboBox<>();
-            comboBox.getItems().addAll("What is your mother's mother's name?", "What was the name of your first pet?", "In what city were you born?");
-            // First question by defult
-            comboBox.setValue("What is your mother's mother's name?");
-            comboBox.setOnAction(e -> {
-                String recoveryQuestion = comboBox.getValue();
-            });
-            TextField recoveryAnswer = new TextField();
-            recoveryAnswer.setPromptText("Enter up to 20 characters");
-            TextFormatter<String> answerFormatter = new TextFormatter<>(change -> {
-                if (change.getControlNewText().length() <= 20) {
-                    return change;
-                } else {
-                    return null; // Reject the change
-                }
-            });
-            recoveryAnswer.setTextFormatter(answerFormatter);
+            masterLayout.getChildren().addAll(masterTitle, enterPassText, masterPassword, chooseQuestionText, recoveryQuestion, recoveryAnswer, signUpButton, warning);
         }
-        masterLayout.getChildren().addAll(masterTitle, enterPassText);
         masterLayout.setAlignment(Pos.CENTER);
         Scene masterScene = new Scene(masterLayout, 1920, 1080);
 
@@ -126,6 +130,24 @@ public class PasswordManagerGUI extends Application {
         Scene deleteScene = new Scene(deleteLayout, 1920, 1080);
 
         // === Scene Switching Logic ===
+        
+        signUpButton.setOnAction(e -> {
+            String masterPassString = masterPassword.getText();
+            String recoveryAnswerString = recoveryAnswer.getText();
+            String recoveryQuestionString = recoveryQuestion.getValue();
+            if (masterPassString.length() < 6) {
+                warning.setVisible(true);
+                warning.setText("Password needs to be at least 6 characters");
+            } else if (recoveryAnswerString.length() == 0) {
+                warning.setVisible(true);
+                warning.setText("Answer is missing");
+            } else {
+                MasterPasswordManager.createMasterPassword(masterPassString, recoveryQuestionString, recoveryAnswerString);
+                stage.setScene(mainMenu);
+            }
+        });
+
+
         addPasswordBtn.setOnAction(e -> stage.setScene(addScene));
         loadPasswordsBtn.setOnAction(e -> stage.setScene(loadScene));
         deletePasswordBtn.setOnAction(e -> stage.setScene(deleteScene));

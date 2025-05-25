@@ -19,7 +19,27 @@ It includes a command-line interface (CLI) as well as a fully featured graphical
 - Adam Smushkevich
 
 ## How to run
-1. Compile:
-```bash
+
+1. Download maven from here : Binary zip archive
+https://maven.apache.org/download.cgi
+
+2. Add the maven bin folder into your system environment variables
+
+3. check that maven is working: mvn --version  
+
+4. compile:
+mvn clean compile
+
+5. run the program:
+mvn javafx:run
+
+
+
+
+Past methods:
 javac -cp lib/json-20231013.jar -d out src/*.java src/PasswordManager/*.java
 java -cp "lib/json-20231013.jar;out" Main
+
+javac --module-path lib --add-modules javafx.controls,javafx.base,javafx.graphics -cp lib/json-20231013.jar -d out src/*.java src/PasswordManager/*.java
+java --module-path lib --add-modules javafx.controls,javafx.base,javafx.graphics -cp "lib/json-20231013.jar;out" PasswordManagerGUI
+
