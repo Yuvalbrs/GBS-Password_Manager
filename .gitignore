@@ -3,3 +3,4 @@
 passwords.json
 .DS_STORE
 masterPassword.hash
+target/

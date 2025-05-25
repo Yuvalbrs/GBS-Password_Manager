@@ -1,9 +1,0 @@
-MasterPasswordManager.class
-PasswordGenerator.class
-Main.class
-PasswordManagerGUI.class
-PasswordTester.class
-StorageManager.class
-EncryptionManager.class
-PasswordManager\PasswordEntry.class
-PasswordManager\PasswordManager.class
