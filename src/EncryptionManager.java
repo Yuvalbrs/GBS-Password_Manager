@@ -1,133 +1,85 @@
-import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.security.InvalidKeyException;
+import java.security.SecureRandom;
 import java.util.Base64;
 import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public class EncryptionManager {
+    // Configuration constants
+    private static final int KEY_SIZE = 256; // Key size in bits
+    private static final int IV_SIZE = 12; // 96-bit IV (Nonce) for AES-GCM
+    private static final int TAG_LENGTH = 128; // GCM authentication tag length in bits
+    private static final int ITERATIONS = 65536; // PBKDF2 iterations for key strengthening
+    private static final String ALGORITHM = "AES"; // Encryption algorithm
+    private static final String TRANSFORMATION = "AES/GCM/NoPadding"; // Cipher transformation
+    private static final String SECRET_KEY_FACTORY_ALGORITHM = "PBKDF2WithHmacSHA256"; // Key derivation function
+
+    private final SecretKey secretKey;
 
     /**
-     * Encrypts the contents of a JSON file using AES and returns a Base64-encoded string.
-     * 
-     * @param jsonFile the input JSON file to encrypt
-     * @param key the AES encryption key
-     * @return a Base64-encoded string representing the encrypted data
+     * Constructor that derives a secret key from a password and salt using PBKDF2.
      */
-    public static String encrypt(File jsonFile, SecretKeySpec key) throws InvalidKeyException { 
-        try {
-            // Read the JSON file content as a String
-            String data = readJsonFileAsString(jsonFile);
-
-            // Initialize AES cipher with ECB mode and PKCS5 padding
-            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, key);
-
-            // Convert the string to bytes and encrypt it
-            byte[] inputBytes = data.getBytes(StandardCharsets.UTF_8);
-            byte[] encryptedBytes = cipher.doFinal(inputBytes);
-
-            // Encode the encrypted bytes to Base64 string
-            return Base64.getEncoder().encodeToString(encryptedBytes);
-        } catch (Exception e) {
-            throw new RuntimeException("Encryption failed", e);
-        }
+    public EncryptionManager(String password, byte[] salt) throws Exception {
+        // Use PBKDF2 to generate a strong key from password and salt
+        PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, ITERATIONS, KEY_SIZE);
+        SecretKeyFactory factory = SecretKeyFactory.getInstance(SECRET_KEY_FACTORY_ALGORITHM);
+        byte[] keyBytes = factory.generateSecret(spec).getEncoded();
+        this.secretKey = new SecretKeySpec(keyBytes, ALGORITHM); // Wrap as AES key
     }
 
     /**
-     * Decrypts a Base64-encoded encrypted string and writes the result to a JSON file.
-     * 
-     * @param data the encrypted Base64 string
-     * @param key the AES decryption key
+     * Encrypt a plaintext string using AES-GCM.
      */
-    public static void decrypt(String data, SecretKeySpec key) {
-        try {
-            String passWordFile = "passwordsDecrypt.json";
+    public String encrypt(String plaintext) throws Exception {
+        Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+        byte[] iv = generateIV(); // Generate a random IV for this encryption
+        GCMParameterSpec parameterSpec = new GCMParameterSpec(TAG_LENGTH, iv);
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, parameterSpec);
 
-            // Initialize AES cipher for decryption
-            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-            cipher.init(Cipher.DECRYPT_MODE, key);
+        // Encrypt the plaintext
+        byte[] encryptedBytes = cipher.doFinal(plaintext.getBytes());
 
-            // Decode the Base64-encoded string to get encrypted bytes
-            byte[] encryptedBytes = Base64.getDecoder().decode(data);
+        // Combine IV and ciphertext into one byte array
+        byte[] ivAndCiphertext = new byte[IV_SIZE + encryptedBytes.length];
+        System.arraycopy(iv, 0, ivAndCiphertext, 0, IV_SIZE);
+        System.arraycopy(encryptedBytes, 0, ivAndCiphertext, IV_SIZE, encryptedBytes.length);
 
-            // Decrypt the bytes
-            byte[] decryptedBytes = cipher.doFinal(encryptedBytes);
-
-            // Convert decrypted bytes to JSON string
-            String decryptedJson = new String(decryptedBytes, StandardCharsets.UTF_8);
-
-            // Write the JSON string to file
-            createJsonFromString(decryptedJson, passWordFile);
-        } catch (Exception e) {
-            throw new RuntimeException("Decryption failed", e);
-        }
+        // Return the result as a Base64-encoded string
+        return Base64.getEncoder().encodeToString(ivAndCiphertext);
     }
 
     /**
-     * Generates an AES SecretKeySpec from a hexadecimal string (must be 16, 24, or 32 bytes long).
-     * 
-     * @param masterPassword the hex-encoded key string
-     * @return the generated SecretKeySpec
-     * @throws Exception if key length is invalid or conversion fails
+     * Decrypt a Base64-encoded string that was encrypted with AES-GCM.
      */
-    public static SecretKeySpec generateKeyFromPassword(String masterPassword) throws Exception {
-        byte[] keyBytes = hexToBytes(masterPassword);
-        SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
+    public String decrypt(String encryptedData) throws Exception {
+        byte[] decoded = Base64.getDecoder().decode(encryptedData);
 
-        // Validate key length for AES (128, 192, or 256 bits)
-        if (keyBytes.length != 16 && keyBytes.length != 24 && keyBytes.length != 32) {
-            throw new IllegalArgumentException("Invalid key length for AES");
-        }
-        return key;
+        // Extract IV and ciphertext from the combined byte array
+        byte[] iv = new byte[IV_SIZE];
+        byte[] ciphertext = new byte[decoded.length - IV_SIZE];
+        System.arraycopy(decoded, 0, iv, 0, IV_SIZE);
+        System.arraycopy(decoded, IV_SIZE, ciphertext, 0, ciphertext.length);
+
+        // Initialize cipher for decryption using the same IV
+        Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+        GCMParameterSpec parameterSpec = new GCMParameterSpec(TAG_LENGTH, iv);
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, parameterSpec);
+
+        // Decrypt and return the original plaintext
+        byte[] decryptedBytes = cipher.doFinal(ciphertext);
+        return new String(decryptedBytes);
     }
 
     /**
-     * Converts a hexadecimal string into a byte array.
-     * 
-     * @param hex the hex string to convert
-     * @return the resulting byte array
+     * Generate a secure random IV (nonce) for AES-GCM.
      */
-    public static byte[] hexToBytes(String hex) {
-        int len = hex.length();
-        byte[] result = new byte[len / 2];
-
-        for (int i = 0; i < len; i += 2) {
-            result[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
-                                 + Character.digit(hex.charAt(i+1), 16));
-        }
-        return result;
-    }
-
-    /**
-     * Reads the content of a JSON file and returns it as a UTF-8 encoded string.
-     * 
-     * @param jsonFile the JSON file to read
-     * @return the file content as a string
-     */
-    public static String readJsonFileAsString(File jsonFile) {
-        try {
-            return new String(Files.readAllBytes(jsonFile.toPath()), StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to read JSON file", e);
-        }
-    }
-
-    /**
-     * Writes a JSON string into a file.
-     * 
-     * @param data the JSON string to write
-     * @param outputPath the destination file path
-     * @return the File object pointing to the written file
-     */
-    public static File createJsonFromString(String data, String outputPath) {
-        try {
-            File file = new File(outputPath);
-            Files.write(file.toPath(), data.getBytes(StandardCharsets.UTF_8));
-            return file;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to write JSON to file", e);
-        }
+    private byte[] generateIV() {
+        byte[] iv = new byte[IV_SIZE];
+        SecureRandom random = new SecureRandom();
+        random.nextBytes(iv);
+        return iv;
     }
 }
