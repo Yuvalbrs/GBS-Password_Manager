@@ -1,4 +1,7 @@
+import java.util.concurrent.atomic.AtomicInteger;
+
 import javafx.application.Application;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -27,13 +30,16 @@ public class PasswordManagerGUI extends Application {
         masterOutline.setColor(Color.BLACK);      // Outline color
         masterOutline.setRadius(15);               // Thickness
 
-        Text masterTitle = new Text("Login To Password Manager");
+        Text masterTitle = new Text("Welcome to Password Manager");
         masterTitle.setFill(Color.WHITE);
         masterTitle.setEffect(masterOutline);
         masterTitle.setFont(Font.font("Segoe UI", 90));
+        VBox.setMargin(masterTitle, new Insets(0, 0, 100, 0));
 
         Text enterPassText = new Text("Enter your password:");
+        styleText(enterPassText);
         TextField masterPassword = new TextField();
+        styleTextField(masterPassword);
         masterPassword.setPromptText("Enter up to 30 characters");
         TextFormatter<String> masterPasswordFormatter = new TextFormatter<>(change -> {
             if (change.getControlNewText().length() <= 30) {
@@ -44,14 +50,15 @@ public class PasswordManagerGUI extends Application {
         });
         masterPassword.setTextFormatter(masterPasswordFormatter);
         Text warning = new Text();
-        warning.setVisible(false);
-        warning.setFill(Color.RED);
+        styleWarning(warning);
         // --- First time loading the program ---
         Text chooseQuestionText = new Text("Choose your recovery question:");
+        styleText(chooseQuestionText);
         ComboBox<String> recoveryQuestion = new ComboBox<>();
         recoveryQuestion.getItems().addAll("What is your mother's mother's name?", "What was the name of your first pet?", "In what city were you born?");
         // First question by defult
         recoveryQuestion.setValue("What is your mother's mother's name?");
+        styleComboBox(recoveryQuestion);
         TextField recoveryAnswer = new TextField();
         recoveryAnswer.setPromptText("Enter up to 20 characters");
         TextFormatter<String> answerFormatter = new TextFormatter<>(change -> {
@@ -62,14 +69,78 @@ public class PasswordManagerGUI extends Application {
             }
         });
         recoveryAnswer.setTextFormatter(answerFormatter);
+        styleTextField(recoveryAnswer);
         Button signUpButton = new Button("Sign Up");
         styleButton(signUpButton);
+        // --- Regular loading of the program ---
+        AtomicInteger loginAttemptsLeft = new AtomicInteger(3);
+        Button LoginButton = new Button("Login");
+        Text loginAttemptText = new Text("Attempts Left: " + loginAttemptsLeft.toString());
+        styleButton(LoginButton);
+        styleText(loginAttemptText);
         // Signup or Login Check
         if (MasterPasswordManager.isFirstTime()) {
             masterLayout.getChildren().addAll(masterTitle, enterPassText, masterPassword, chooseQuestionText, recoveryQuestion, recoveryAnswer, signUpButton, warning);
+        } else {
+            masterLayout.getChildren().addAll(masterTitle, enterPassText, masterPassword, loginAttemptText, LoginButton, warning);
         }
-        masterLayout.setAlignment(Pos.CENTER);
         Scene masterScene = new Scene(masterLayout, 1920, 1080);
+
+        // === Master Password Recovery Page ===
+
+        VBox masterRecoveryLayout = new VBox(20);
+        masterRecoveryLayout.setAlignment(Pos.CENTER);
+        masterRecoveryLayout.setStyle("-fx-background-color: linear-gradient(to bottom,rgb(108, 184, 255),rgb(45, 115, 164));");
+        // Set Outline Effect
+        DropShadow masterRecoveryOutline = new DropShadow();
+        masterRecoveryOutline.setOffsetX(0);
+        masterRecoveryOutline.setOffsetY(0);
+        masterRecoveryOutline.setColor(Color.BLACK);      // Outline color
+        masterRecoveryOutline.setRadius(15);               // Thickness
+
+        Text masterRecoveryTitle = new Text("Recover Master Password");
+        masterRecoveryTitle.setFill(Color.WHITE);
+        masterRecoveryTitle.setEffect(masterOutline);
+        masterRecoveryTitle.setFont(Font.font("Segoe UI", 90));
+        VBox.setMargin(masterRecoveryTitle, new Insets(0, 0, 100, 0));
+
+        Text masterRecoveryQuestion = new Text(MasterPasswordManager.getQuestion());
+        styleText(masterRecoveryQuestion);
+        TextField masterRecoveryAnswer = new TextField();
+        masterRecoveryAnswer.setPromptText("Enter up to 20 characters");
+        TextFormatter<String> recoveryAnswerFormatter = new TextFormatter<>(change -> {
+            if (change.getControlNewText().length() <= 20) {
+                return change;
+            } else {
+                return null; // Reject the change
+            }
+        });
+        masterRecoveryAnswer.setTextFormatter(recoveryAnswerFormatter);
+        styleTextField(masterRecoveryAnswer);
+
+        Text textPasswordRecovery = new Text("Enter new password");
+        styleText(textPasswordRecovery);
+        TextField masterPasswordRecovery = new TextField();
+        masterPasswordRecovery.setPromptText("Enter up to 30 characters");
+        TextFormatter<String> recoveryPasswordFormatter = new TextFormatter<>(change -> {
+            if (change.getControlNewText().length() <= 20) {
+                return change;
+            } else {
+                return null; // Reject the change
+            }
+        });
+        masterPasswordRecovery.setTextFormatter(recoveryPasswordFormatter);
+        styleTextField(masterPasswordRecovery);
+
+        Button recoveryButton = new Button("Recover Password");
+        styleButton(recoveryButton);
+
+        Text recoveryWarning = new Text();
+        styleWarning(recoveryWarning);
+
+        masterRecoveryLayout.getChildren().addAll(masterRecoveryTitle, masterRecoveryQuestion, masterRecoveryAnswer, textPasswordRecovery, masterPasswordRecovery, recoveryButton, recoveryWarning);
+
+        Scene masterRecoveryScene = new Scene(masterRecoveryLayout, 1920, 1080);
 
         // === Main Menu ===
         VBox menuLayout = new VBox(20);
@@ -147,6 +218,35 @@ public class PasswordManagerGUI extends Application {
             }
         });
 
+        LoginButton.setOnAction(e -> {
+            String masterPassString = masterPassword.getText();
+            if (MasterPasswordManager.checkPassword(masterPassString)) {
+                stage.setScene(mainMenu);
+            } else {
+                loginAttemptsLeft.decrementAndGet();
+                loginAttemptText.setText("Attempts Left: " + loginAttemptsLeft.toString());
+                warning.setVisible(true);
+                warning.setText("Password is not correct");
+                if (loginAttemptsLeft.get() == 0) {
+                    stage.setScene(masterRecoveryScene);
+                }
+            }
+        });
+
+        recoveryButton.setOnAction(e -> {
+            String answer = masterRecoveryAnswer.getText();
+            String newPass = masterPasswordRecovery.getText();
+
+            if (newPass.length() < 6) {
+                recoveryWarning.setVisible(true);
+                recoveryWarning.setText("Password needs to be at least 6 characters");
+            } else if (MasterPasswordManager.recoverPassword(answer, newPass)) {
+                stage.setScene(mainMenu);
+            } else {
+                recoveryWarning.setVisible(true);
+                recoveryWarning.setText("Answer is not correct");
+            }
+        });
 
         addPasswordBtn.setOnAction(e -> stage.setScene(addScene));
         loadPasswordsBtn.setOnAction(e -> stage.setScene(loadScene));
@@ -164,7 +264,7 @@ public class PasswordManagerGUI extends Application {
 
     // Reusable button styling
     private void styleButton(Button btn) {
-        btn.setFont(Font.font("Verdana", 60));
+        btn.setFont(Font.font("Verdana", 30));
         String baseStyle = "-fx-background-color:rgb(5, 71, 116); -fx-text-fill: white; -fx-padding: 15 30 15 30;";
         String hoverStyle = "-fx-background-color: rgb(12, 116, 214); -fx-text-fill: white; -fx-padding: 15 30 15 30;";
     
@@ -172,6 +272,43 @@ public class PasswordManagerGUI extends Application {
 
         btn.setOnMouseEntered(e -> btn.setStyle(hoverStyle));
         btn.setOnMouseExited(e -> btn.setStyle(baseStyle));
+    }
+
+    // Reusable text styling
+    private void styleText(Text txt) {
+        txt.setStyle("-fx-font-size: 18px;" +
+                     "-fx-font-weight: bold;" +
+                     "-fx-fill: #333;");
+    }   
+
+    // Reusable warning styling
+    private void styleWarning(Text txt) {
+        txt.setStyle("-fx-font-size: 18px;" +
+                     "-fx-font-weight: bold;" +
+                     "-fx-fill: rgb(226, 11, 11);");
+        txt.setVisible(false);
+    }   
+
+    // Reusable text field styling
+    private void styleTextField(TextField tf) {
+        tf.setStyle("-fx-font-size: 14px;" +
+                "-fx-background-color: #f0f0f0;" +
+                "-fx-border-color: #ccc;" +
+                "-fx-border-radius: 4;" +
+                "-fx-background-radius: 4;" +
+                "-fx-padding: 6 10;");
+        tf.setMaxWidth(300);
+    
+    }
+
+    // Reusable combo box styling
+    private void styleComboBox(ComboBox<?> comboBox) {
+        comboBox.setStyle("-fx-font-size: 14px;" +
+                      "-fx-padding: 5 10 5 10;" +
+                      "-fx-background-color: #f0f0f0;" +
+                      "-fx-border-color: #ccc;" +
+                      "-fx-border-radius: 5;" +
+                      "-fx-background-radius: 5;");
     }
 
 

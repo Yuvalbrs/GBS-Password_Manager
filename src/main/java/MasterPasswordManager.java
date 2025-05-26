@@ -87,5 +87,16 @@ public class MasterPasswordManager {
             System.out.println("Error loading passwords: " + e.getMessage());
             return false;
         }
-    }    
+    }
+    
+    public static String getQuestion() {
+        try {
+            Path path = Paths.get("masterPassword.hash");
+            List<String> lines = Files.readAllLines(path);
+            String firstLine = lines.get(1).trim();
+            return firstLine;
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }
